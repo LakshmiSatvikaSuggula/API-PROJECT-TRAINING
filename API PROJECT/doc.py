@@ -71,6 +71,38 @@ def userlogin():
         return jsonify({"message":"Login failed"})
 
 
+@app.route("/userregister", methods=["POST"])
+def userregister():
+    data = request.json
+    dname = data.get('dname')
+    dspec = data.get('dspec')
+    dphn = data.get('dphn')
+    demail = data.get('demail')
+    dpassw = data.get('dpassw')
+    dkw=data.get('dkw')
+
+    if not all([dname, dspec, dphn, demail, dpassw,dkw]):
+        return jsonify({"message": "Missing registration details"})
+
+    cur = mysql.connection.cursor()
+    cur.execute("select did from doctor where demail = %s", (demail,))
+    if cur.fetchone():
+        return jsonify({"message": "Email already registered"})
+    hashed_password=bcrypt.generate_password_hash(dpassw).decode('utf-8')
+    try:
+        cur.execute(
+            "insert into doctor(dname,dspec, dphn, demail, dpassw,dkw) values (%s, %s, %s, %s, %s,%s)",
+            (dname,dspec, dphn, demail, hashed_password,dkw)
+        )
+        mysql.connection.commit()
+    except Exception as e:
+        return jsonify({"message": f"Registration failed: {str(e)}"})
+    finally:
+        cur.close()
+    return jsonify({"message": "success"})
+
+
+
 @app.route("/profile2",methods=['get'])
 @jwt_required()
 def profile1():
