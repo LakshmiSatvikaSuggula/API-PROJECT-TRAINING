@@ -115,5 +115,34 @@ def tellproblem():
         return jsonify({"message":"Go to View history button"})
     return jsonify({"message":"something went wrong"})
 
+@app.route("/userregister", methods=["POST"])
+def userregister():
+    data = request.json
+    pname = data.get('pname')
+    pplace = data.get('pplace')
+    pphn = data.get('pphn')
+    ppemail = data.get('ppemail')
+    ppassw = data.get('ppassw')
+
+    if not all([pname, pplace, pphn, ppemail, ppassw]):
+        return jsonify({"message": "Missing registration details"})
+
+    cur = mysql.connection.cursor()
+    cur.execute("select pid from patient where ppemail = %s", (ppemail,))
+    if cur.fetchone():
+        return jsonify({"message": "Email already registered"})
+    hashed_password=bcrypt.generate_password_hash(ppassw).decode('utf-8')
+    try:
+        cur.execute(
+            "insert into patient (pname, pplace, pphn, ppemail, ppassw) values (%s, %s, %s, %s, %s)",
+            (pname, pplace, pphn, ppemail, hashed_password)
+        )
+        mysql.connection.commit()
+    except Exception as e:
+        return jsonify({"message": f"Registration failed: {str(e)}"})
+    finally:
+        cur.close()
+    return jsonify({"message": "success"})
+
 if __name__=="__main__":
    app.run(debug=True)
